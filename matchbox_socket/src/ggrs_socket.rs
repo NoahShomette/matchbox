@@ -64,7 +64,35 @@ impl WebRtcSocket {
     }
 }
 
-impl WebRtcSocket {
+impl WebRtcSocket<MultipleChannels> {
+    /// Returns a Vec of connected peers as [`ggrs::PlayerType`]
+    pub fn players(&self) -> Vec<PlayerType<PeerId>> {
+        let Some(our_id) = self.id() else {
+            // we're still waiting for the server to initialize our id
+            // no peers should be added at this point anyway
+            return vec![PlayerType::Local];
+        };
+
+        // player order needs to be consistent order across all peers
+        let mut ids: Vec<_> = self
+            .connected_peers()
+            .chain(std::iter::once(our_id))
+            .collect();
+        ids.sort();
+
+        ids.into_iter()
+            .map(|id| {
+                if id == our_id {
+                    PlayerType::Local
+                } else {
+                    PlayerType::Remote(id)
+                }
+            })
+            .collect()
+    }
+}
+
+impl WebRtcSocket<SingleChannel> {
     /// Returns a Vec of connected peers as [`ggrs::PlayerType`]
     pub fn players(&self) -> Vec<PlayerType<PeerId>> {
         let Some(our_id) = self.id() else {
